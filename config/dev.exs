@@ -3,9 +3,9 @@ import Config
 # Configure your database
 config :elo_server, EloServer.Repo,
   username: "postgres",
-  password: "postgres",
+  password: "admin",
   hostname: "localhost",
-  database: "elo_server_dev",
+  database: "debate_elo_history",
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
