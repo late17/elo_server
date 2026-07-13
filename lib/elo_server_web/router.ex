@@ -17,7 +17,8 @@ defmodule EloServerWeb.Router do
   scope "/", EloServerWeb do
     pipe_through :browser
 
-    live "/", TournamentLive
+    live "/", RatingLive
+    live "/about", AboutLive
   end
 
   # Other scopes may use custom stacks.
