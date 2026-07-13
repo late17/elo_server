@@ -1,14 +1,42 @@
 import Config
 
+# Load environment variables from .env (if present) so local DB credentials
+# don't need to be hardcoded or committed.
+env_path = Path.expand("../.env", __DIR__)
+
+if File.exists?(env_path) do
+  env_path
+  |> File.read!()
+  |> String.split("\n", trim: true)
+  |> Enum.each(fn line ->
+    line = String.trim(line)
+
+    case line do
+      "#" <> _ ->
+        :ok
+
+      "" ->
+        :ok
+
+      _ ->
+        case String.split(line, "=", parts: 2) do
+          [key, value] -> System.put_env(String.trim(key), String.trim(value))
+          _ -> :ok
+        end
+    end
+  end)
+end
+
 # Configure your database
 config :elo_server, EloServer.Repo,
-  username: "postgres",
-  password: "admin",
-  hostname: "localhost",
-  database: "debate_elo_history",
+  username: System.get_env("DB_USERNAME", "postgres"),
+  password: System.get_env("DB_PASSWORD", "admin"),
+  hostname: System.get_env("DB_HOST", "localhost"),
+  port: String.to_integer(System.get_env("DB_PORT", "5432")),
+  database: System.get_env("DB_NAME", "debate_elo_history"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
-  pool_size: 10
+  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10"))
 
 # For development, we disable any cache and enable
 # debugging and code reloading.
