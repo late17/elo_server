@@ -68,8 +68,8 @@ defmodule EloServerWeb.RatingLive do
   defp elo_change_class(_), do: ""
 
   defp elo_change_label(nil), do: ""
-  defp elo_change_label(diff) when diff > 0, do: "↑#{round(diff)}"
-  defp elo_change_label(diff) when diff < 0, do: "↓#{abs(round(diff))}"
+  defp elo_change_label(diff) when diff > 0, do: "↑#{floor(diff)}"
+  defp elo_change_label(diff) when diff < 0, do: "↓#{floor(abs(diff))}"
   defp elo_change_label(_), do: ""
 
   def render(assigns) do

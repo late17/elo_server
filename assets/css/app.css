@@ -314,3 +314,42 @@
   color: #000;
   transform: scale(1.2);
 }
+
+.rating-compare-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: min(1100px, 100%);
+  margin: 0 auto 1.5rem;
+  padding: 1rem 1.5rem;
+  box-sizing: border-box;
+  color: gold;
+  border-radius: 16px;
+  background: rgba(18, 18, 18, 0.96);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.rating-compare-controls select {
+  margin-left: 0.5rem;
+  padding: 0.3rem;
+  background: #111;
+  color: gold;
+  border: 1px solid gold;
+  border-radius: 4px;
+}
+
+.rating-table td.new {
+  color: cyan;
+  font-weight: 600;
+}
+
+.rating-table td.disappeared {
+  color: #888;
+  font-style: italic;
+}
+
+.rating-table tbody tr.rating-row-disappeared td,
+.rating-table tbody tr.rating-row-disappeared td span {
+  color: #888;
+}
