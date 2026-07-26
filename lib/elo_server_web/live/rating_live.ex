@@ -108,7 +108,11 @@ defmodule EloServerWeb.RatingLive do
                       {rank_change_label(entry.rank_change)}
                     </span>
                   </td>
-                  <td>{entry.player_name}</td>
+                  <td>
+                    <.link navigate={~p"/player/#{entry.player_id}"} class="rating-player-link">
+                      {entry.player_name}
+                    </.link>
+                  </td>
                   <td>{entry.games_played}</td>
                   <td class="rating-elo-cell">
                     <span class="rating-elo">{floor(entry.elo)}</span>

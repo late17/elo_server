@@ -19,16 +19,22 @@ defmodule EloServerWeb.CompareLive do
       |> assign(:timeline, timeline)
       |> assign(:start_id, start_id)
       |> assign(:end_id, "current")
+      |> assign(:search, "")
+      |> assign(:include_inactive, false)
+      |> assign(:include_unqualified, false)
       |> compute_entries()
 
     {:ok, socket}
   end
 
-  def handle_event("update", %{"start" => start_id, "end" => end_id}, socket) do
+  def handle_event("update", params, socket) do
     socket =
       socket
-      |> assign(:start_id, start_id)
-      |> assign(:end_id, end_id)
+      |> assign(:start_id, params["start"] || socket.assigns.start_id)
+      |> assign(:end_id, params["end"] || socket.assigns.end_id)
+      |> assign(:search, params["search"] || "")
+      |> assign(:include_inactive, params["include_inactive"] == "true")
+      |> assign(:include_unqualified, params["include_unqualified"] == "true")
       |> compute_entries()
 
     {:noreply, socket}
@@ -38,9 +44,23 @@ defmodule EloServerWeb.CompareLive do
     start_boundary = {:tournament, socket.assigns.start_id}
     end_boundary = boundary_for(socket.assigns.end_id)
 
-    entries = Ranking.compare(start_boundary, end_boundary)
+    opts = [
+      include_inactive: socket.assigns.include_inactive,
+      include_unqualified: socket.assigns.include_unqualified
+    ]
+
+    entries =
+      Ranking.compare(start_boundary, end_boundary, opts)
+      |> filter_by_search(socket.assigns.search)
 
     assign(socket, :entries, entries)
+  end
+
+  defp filter_by_search(entries, ""), do: entries
+
+  defp filter_by_search(entries, search) do
+    needle = String.downcase(search)
+    Enum.filter(entries, &String.contains?(String.downcase(&1.player_name), needle))
   end
 
   defp boundary_for("current"), do: :current
@@ -112,6 +132,45 @@ defmodule EloServerWeb.CompareLive do
             </label>
           </form>
 
+          <div class="rating-filter-panel">
+            <form phx-change="update" class="rating-filter-form">
+              <input type="hidden" name="start" value={@start_id} />
+              <input type="hidden" name="end" value={@end_id} />
+
+              <input
+                type="text"
+                name="search"
+                value={@search}
+                placeholder="Search by player name"
+                class="rating-search-input"
+              />
+
+              <label class="rating-switch-label">
+                <input
+                  type="checkbox"
+                  name="include_inactive"
+                  value="true"
+                  checked={@include_inactive}
+                  class="rating-switch-input"
+                />
+                <span class="rating-switch"></span>
+                Inactive Players
+              </label>
+
+              <label class="rating-switch-label">
+                <input
+                  type="checkbox"
+                  name="include_unqualified"
+                  value="true"
+                  checked={@include_unqualified}
+                  class="rating-switch-input"
+                />
+                <span class="rating-switch"></span>
+                Unqualified Players
+              </label>
+            </form>
+          </div>
+
           <div class="rating-table-container">
             <table class="rating-table">
               <thead>
@@ -130,7 +189,11 @@ defmodule EloServerWeb.CompareLive do
                       {rank_change_label(entry)}
                     </span>
                   </td>
-                  <td>{entry.player_name}</td>
+                  <td>
+                    <.link navigate={~p"/player/#{entry.player_id}"} class="rating-player-link">
+                      {entry.player_name}
+                    </.link>
+                  </td>
                   <td class="rating-elo-cell">
                     <span class="rating-elo">{entry.games_end}</span>
                     <span class={"rating-elo-change #{games_change_class(entry.games_in_span)}"}>

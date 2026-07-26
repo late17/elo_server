@@ -314,14 +314,26 @@ defmodule EloServer.Ranking do
   @doc """
   Determines whether a snapshot entry qualifies for the rating list at the
   given boundary date (>= min games, active within the last year, not tech).
-  """
-  def eligible_at?(entry, boundary_date) do
-    since = Date.add(boundary_date, -@active_within_days)
 
-    entry.games >= @min_games and
-      not entry.is_tech_team and
-      entry.last_game_date != nil and
-      Date.compare(entry.last_game_date, since) != :lt
+  `opts`:
+    * `:include_inactive` — skip the "active within a year" check.
+    * `:include_unqualified` — skip the ">= min games" check.
+
+  Both still require the player to have actually played at least one game
+  and to not be a tech-team player.
+  """
+  def eligible_at?(entry, boundary_date, opts \\ []) do
+    include_inactive = Keyword.get(opts, :include_inactive, false)
+    include_unqualified = Keyword.get(opts, :include_unqualified, false)
+
+    games_ok = include_unqualified or entry.games >= @min_games
+
+    active_ok =
+      include_inactive or
+        (entry.last_game_date != nil and
+           Date.compare(entry.last_game_date, Date.add(boundary_date, -@active_within_days)) != :lt)
+
+    games_ok and active_ok and not entry.is_tech_team and entry.last_game_date != nil
   end
 
   @doc """
@@ -334,7 +346,7 @@ defmodule EloServer.Ranking do
     * `:disappeared` — eligible at `start_boundary` but not at `end_boundary`
       (their last game fell more than a year before the end boundary).
   """
-  def compare(start_boundary, end_boundary) do
+  def compare(start_boundary, end_boundary, opts \\ []) do
     timeline = tournament_timeline()
     start_index = resolve_boundary(start_boundary, timeline)
     end_index = resolve_boundary(end_boundary, timeline)
@@ -346,10 +358,10 @@ defmodule EloServer.Ranking do
     end_snapshot = snapshot(end_index, timeline)
 
     start_eligible =
-      start_snapshot |> Map.values() |> Enum.filter(&eligible_at?(&1, start_date))
+      start_snapshot |> Map.values() |> Enum.filter(&eligible_at?(&1, start_date, opts))
 
     end_eligible =
-      end_snapshot |> Map.values() |> Enum.filter(&eligible_at?(&1, end_date))
+      end_snapshot |> Map.values() |> Enum.filter(&eligible_at?(&1, end_date, opts))
 
     start_ranks = ranks_by_elo(start_eligible)
     end_ranks = ranks_by_elo(end_eligible)
