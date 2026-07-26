@@ -6,7 +6,7 @@ defmodule EloServerWeb.PlayerLive do
 
   use EloServerWeb, :live_view
 
-  alias EloServer.PlayerReport
+  alias EloServer.{GameDetail, PlayerReport}
 
   def mount(%{"id" => player_id}, _session, socket) do
     socket =
@@ -26,9 +26,26 @@ defmodule EloServerWeb.PlayerLive do
           |> assign(:tournament_wins, tournament_wins(report.games))
           |> assign(:final_losses, final_losses(report.games))
           |> assign(:semi_final_losses, semi_final_losses(report.games))
+          |> assign(:expanded_game_id, nil)
+          |> assign(:expanded_game, nil)
       end
 
     {:ok, socket}
+  end
+
+  def handle_event("toggle_game", %{"id" => game_id}, socket) do
+    socket =
+      if socket.assigns.expanded_game_id == game_id do
+        socket
+        |> assign(:expanded_game_id, nil)
+        |> assign(:expanded_game, nil)
+      else
+        socket
+        |> assign(:expanded_game_id, game_id)
+        |> assign(:expanded_game, GameDetail.get(game_id, socket.assigns.player.id))
+      end
+
+    {:noreply, socket}
   end
 
   @final_round_types ["FINAL", "NOVICE_FINAL", "JUNIOR_FINAL"]
@@ -103,8 +120,8 @@ defmodule EloServerWeb.PlayerLive do
   defp result_label(_), do: "-"
 
   defp result_class(:first), do: "up"
-  defp result_class(:second), do: ""
-  defp result_class(:third), do: ""
+  defp result_class(:second), do: "up-light"
+  defp result_class(:third), do: "down-light"
   defp result_class(:fourth), do: "down"
   defp result_class(:advancing), do: "up"
   defp result_class(:eliminated), do: "down"
@@ -117,6 +134,19 @@ defmodule EloServerWeb.PlayerLive do
   defp elo_change_label(diff) when is_number(diff) and diff > 0, do: "↑#{floor(diff)}"
   defp elo_change_label(diff) when is_number(diff) and diff < 0, do: "↓#{floor(abs(diff))}"
   defp elo_change_label(_), do: ""
+
+  defp signed_points(nil), do: "—"
+
+  defp signed_points(value) when is_number(value) do
+    sign = if value >= 0, do: "+", else: "−"
+    :erlang.float_to_binary(abs(value), decimals: 1)
+    |> then(&"#{sign}#{&1}")
+  end
+
+  defp points_class(nil), do: ""
+  defp points_class(value) when is_number(value) and value > 0, do: "up"
+  defp points_class(value) when is_number(value) and value < 0, do: "down"
+  defp points_class(_), do: ""
 
   defp win_label("FINAL"), do: "Won"
   defp win_label("NOVICE_FINAL"), do: "Won Novice Final"
@@ -230,9 +260,10 @@ defmodule EloServerWeb.PlayerLive do
           </div>
 
           <div class="rating-table-container">
-            <table class="rating-table">
+            <table class="rating-table rating-history-table">
               <thead>
                 <tr>
+                  <th></th>
                   <th>DATE</th>
                   <th>TOURNAMENT</th>
                   <th>ROUND</th>
@@ -242,19 +273,71 @@ defmodule EloServerWeb.PlayerLive do
                 </tr>
               </thead>
               <tbody>
-                <tr :for={game <- @games}>
-                  <td>{game.tournament_date}</td>
-                  <td>{game.tournament_name}</td>
-                  <td>{round_label(game.round_type, game.round_number)}</td>
-                  <td>{seat_label(game.seat)}</td>
-                  <td class={result_class(game.result)}>{result_label(game.result)}</td>
-                  <td class="rating-elo-cell">
-                    <span class="rating-elo">{floor(game.elo_before + game.elo_diff)}</span>
-                    <span class={"rating-elo-change #{elo_change_class(game.elo_diff)}"}>
-                      {elo_change_label(game.elo_diff)}
-                    </span>
-                  </td>
-                </tr>
+                <%= for game <- @games do %>
+                  <tr
+                    class="rating-game-row"
+                    phx-click="toggle_game"
+                    phx-value-id={game.game_id}
+                  >
+                    <td class="rating-game-chevron">
+                      {if @expanded_game_id == game.game_id, do: "▾", else: "▸"}
+                    </td>
+                    <td>{game.tournament_date}</td>
+                    <td>{game.tournament_name}</td>
+                    <td>{round_label(game.round_type, game.round_number)}</td>
+                    <td>{seat_label(game.seat)}</td>
+                    <td class={result_class(game.result)}>{result_label(game.result)}</td>
+                    <td class="rating-elo-cell">
+                      <span class="rating-elo">{floor(game.elo_before + game.elo_diff)}</span>
+                      <span class={"rating-elo-change #{elo_change_class(game.elo_diff)}"}>
+                        {elo_change_label(game.elo_diff)}
+                      </span>
+                    </td>
+                  </tr>
+                  <tr :if={@expanded_game_id == game.game_id}>
+                    <td colspan="7" class="rating-game-detail-cell">
+                      <div :if={@expanded_game} class="rating-game-detail">
+                        <div :for={team <- @expanded_game.teams} class="rating-game-team">
+                          <div class="rating-game-team-header">
+                            <span class="rating-game-team-seat">{seat_label(team.seat)}</span>
+                            <span class="rating-game-team-name">{team.name}</span>
+                            <span class={"rating-game-team-result #{result_class(team.result)}"}>
+                              {result_label(team.result)}
+                            </span>
+                          </div>
+                          <div class="rating-game-team-rating">
+                            Team rating: {floor(team.rating)}
+                          </div>
+                          <ul class="rating-game-players">
+                            <li
+                              :for={player <- team.players}
+                              class={
+                                "rating-game-player" <>
+                                  if(player.player_id == @player.id, do: " rating-game-player-self", else: "")
+                              }
+                            >
+                              <.link navigate={~p"/player/#{player.player_id}"}>
+                                {player.name}
+                              </.link>
+                              <span class="rating-game-player-elo">
+                                {floor(player.elo_before)}
+                              </span>
+                              <span class={"rating-game-player-change #{elo_change_class(player.elo_diff)}"}>
+                                {elo_change_label(player.elo_diff)}
+                              </span>
+                            </li>
+                          </ul>
+                          <div :if={team.seat != @expanded_game.viewer_seat} class="rating-game-team-points">
+                            <span>vs you</span>
+                            <span class={points_class(team.points_vs_viewer)}>
+                              {signed_points(team.points_vs_viewer)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                <% end %>
               </tbody>
             </table>
           </div>
