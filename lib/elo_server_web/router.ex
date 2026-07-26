@@ -19,7 +19,6 @@ defmodule EloServerWeb.Router do
 
     live "/", RatingLive
     live "/about", AboutLive
-    live "/compare", CompareLive
     live "/player/:id", PlayerLive
   end
 

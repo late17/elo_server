@@ -261,7 +261,8 @@ defmodule EloServerWeb.PlayerLive do
         </main>
 
         <footer class="rating-footer">
-          <.link navigate={~p"/"}>Rating</.link>
+          © {Date.utc_today().year} Lviv Debate Union спільно з Аніме на Аві, Східняцьке Бидло Продакшн та КООП "Озеро"
+          | <.link navigate={~p"/about"} class="rating-footer-about">About</.link>
         </footer>
       </div>
     </div>
