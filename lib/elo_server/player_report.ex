@@ -103,9 +103,11 @@ defmodule EloServer.PlayerReport do
 
     index = slot * 2 + (within_team_index || 0)
 
+    # `game.players_elos` is the pre-match snapshot (Kotlin writes it as
+    # `playersStartElos`), not a post-match value — no subtraction needed.
     elos = PlayerElos.parse(game.players_elos)
     diffs = PlayerElos.parse(game.players_elo_diff)
-    elo_after = Enum.at(elos, index, 0.0)
+    elo_before = Enum.at(elos, index, 0.0)
     elo_diff = Enum.at(diffs, index, 0.0)
 
     %GameEntry{
@@ -116,7 +118,7 @@ defmodule EloServer.PlayerReport do
       round_number: round.number,
       seat: seat,
       result: result_for(game, seat),
-      elo_before: elo_after - elo_diff,
+      elo_before: elo_before,
       elo_diff: elo_diff
     }
   end

@@ -320,7 +320,7 @@ defmodule EloServerWeb.PlayerLive do
                                 {player.name}
                               </.link>
                               <span class="rating-game-player-elo">
-                                {floor(player.elo_before)}
+                                {floor(player.elo_before + player.elo_diff)}
                               </span>
                               <span class={"rating-game-player-change #{elo_change_class(player.elo_diff)}"}>
                                 {elo_change_label(player.elo_diff)}

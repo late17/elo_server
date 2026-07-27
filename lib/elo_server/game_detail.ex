@@ -205,15 +205,16 @@ defmodule EloServer.GameDetail do
     end
   end
 
+  # `game.players_elos` is already the pre-match snapshot (Kotlin writes it
+  # as `playersStartElos`), not a post-match value — no subtraction needed.
   defp elos_before_by_team(game) do
     elos_by_team = PlayerElos.parse_by_team(game.players_elos)
     diffs_by_team = PlayerElos.parse_by_team(game.players_elo_diff)
 
     @position_order
     |> Map.new(fn seat ->
-      afters = Map.fetch!(elos_by_team, seat)
+      befores = Map.fetch!(elos_by_team, seat)
       diffs = Map.fetch!(diffs_by_team, seat)
-      befores = Enum.zip(afters, diffs) |> Enum.map(fn {a, d} -> a - d end)
       {seat, {befores, diffs}}
     end)
   end
