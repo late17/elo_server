@@ -166,7 +166,7 @@ defmodule EloServer.Ranking do
         |> Map.get(team_id, [])
         |> Enum.with_index()
         |> Enum.reduce({elo_diffs, game_counts}, fn {pit, within_team_index},
-                                                     {elo_diffs, game_counts} ->
+                                                    {elo_diffs, game_counts} ->
           case pit.player_id do
             nil ->
               {elo_diffs, game_counts}
@@ -232,15 +232,27 @@ defmodule EloServer.Ranking do
   boundary at `index` in `timeline`.
   """
   def snapshot(index, timeline \\ tournament_timeline()) do
-    diffs_by_tournament = all_tournament_diffs(timeline)
-    participations = all_participations()
+    snapshot_from(index, timeline, snapshot_context(timeline))
+  end
 
+  # The expensive part of `snapshot/2` (every game/diff and every
+  # participation in the DB) — load it once and reuse it across the
+  # multiple snapshots that `compare/3` and `list_rankings_at/2` each need.
+  defp snapshot_context(timeline) do
+    %{
+      diffs_by_tournament: all_tournament_diffs(timeline),
+      participations: all_participations(),
+      players: Repo.all(Player)
+    }
+  end
+
+  defp snapshot_from(index, timeline, ctx) do
     after_indexes = (index + 1)..(length(timeline) - 1)//1
 
     {elo_after, games_after} =
       Enum.reduce(after_indexes, {%{}, %{}}, fn i, {elo_acc, games_acc} ->
         tournament = Enum.at(timeline, i)
-        {elo_diffs, game_counts} = Map.get(diffs_by_tournament, tournament.id, {%{}, %{}})
+        {elo_diffs, game_counts} = Map.get(ctx.diffs_by_tournament, tournament.id, {%{}, %{}})
 
         elo_acc = merge_sum(elo_acc, elo_diffs)
         games_acc = merge_sum(games_acc, game_counts)
@@ -250,14 +262,12 @@ defmodule EloServer.Ranking do
     boundary_date = if index >= 0, do: Enum.at(timeline, index).date, else: nil
 
     last_game_dates =
-      participations
+      ctx.participations
       |> Enum.filter(fn p -> boundary_date && Date.compare(p.date, boundary_date) != :gt end)
       |> Enum.group_by(& &1.player_id, & &1.date)
       |> Map.new(fn {player_id, dates} -> {player_id, Enum.max(dates, Date, fn -> nil end)} end)
 
-    Player
-    |> Repo.all()
-    |> Map.new(fn player ->
+    Map.new(ctx.players, fn player ->
       elo = player.elo - Map.get(elo_after, player.id, 0.0)
       games = player.games_played - Map.get(games_after, player.id, 0)
       last_game_date = Map.get(last_game_dates, player.id)
@@ -331,9 +341,82 @@ defmodule EloServer.Ranking do
     active_ok =
       include_inactive or
         (entry.last_game_date != nil and
-           Date.compare(entry.last_game_date, Date.add(boundary_date, -@active_within_days)) != :lt)
+           Date.compare(entry.last_game_date, Date.add(boundary_date, -@active_within_days)) !=
+             :lt)
 
     games_ok and active_ok and not entry.is_tech_team and entry.last_game_date != nil
+  end
+
+  @doc """
+  Rating list (`[%Entry{}]`, same shape `list_rankings/1` returns) as of an
+  arbitrary tournament boundary, with movement (`elo_change`/`rank_change`)
+  caused by that specific tournament — i.e. the delta against the boundary
+  right before it. Used to step back/forward through tournament history on
+  the main rating page.
+
+  Eligibility (`eligible_at?/3`) is evaluated as of that tournament's own
+  date, so a player suspended for inactivity by that point (or who hadn't
+  yet reached the games-played minimum) correctly drops out of the list,
+  the same way `compare/3` does for a `{:tournament, _}` boundary.
+  """
+  def list_rankings_at(boundary, opts \\ []) do
+    timeline = tournament_timeline()
+    index = resolve_boundary(boundary, timeline)
+    boundary_date = boundary_date(index, timeline, boundary)
+
+    ctx = snapshot_context(timeline)
+    current = snapshot_from(index, timeline, ctx)
+    previous = snapshot_from(index - 1, timeline, ctx)
+
+    eligible =
+      current
+      |> Map.values()
+      |> Enum.filter(&eligible_at?(&1, boundary_date, opts))
+
+    ranked =
+      Enum.map(eligible, fn entry ->
+        prev_entry = Map.get(previous, entry.player_id)
+        elo_before = if prev_entry, do: prev_entry.elo, else: entry.elo
+        games_before = if prev_entry, do: prev_entry.games, else: 0
+
+        %{entry: entry, elo_before: elo_before, games_before: games_before}
+      end)
+
+    new_order = Enum.sort_by(ranked, & &1.entry.elo, :desc)
+    old_order = Enum.sort_by(ranked, & &1.elo_before, :desc)
+
+    old_ranks =
+      old_order
+      |> Enum.with_index(1)
+      |> Map.new(fn {row, rank} -> {row.entry.player_id, rank} end)
+
+    new_order
+    |> Enum.with_index(1)
+    |> Enum.map(fn {row, new_rank} ->
+      diff = row.entry.elo - row.elo_before
+
+      %Entry{
+        rank: new_rank,
+        player_id: row.entry.player_id,
+        player_name: row.entry.player_name,
+        games_played: row.entry.games,
+        elo: row.entry.elo,
+        elo_change: if(diff != 0.0, do: diff, else: nil),
+        rank_change: rank_change_at(row, old_ranks, new_rank)
+      }
+    end)
+  end
+
+  defp rank_change_at(%{games_before: games_before}, _old_ranks, _new_rank)
+       when games_before < @min_games do
+    :new
+  end
+
+  defp rank_change_at(row, old_ranks, new_rank) do
+    case Map.fetch(old_ranks, row.entry.player_id) do
+      {:ok, old_rank} -> old_rank - new_rank
+      :error -> :new
+    end
   end
 
   @doc """
@@ -354,8 +437,9 @@ defmodule EloServer.Ranking do
     start_date = boundary_date(start_index, timeline, start_boundary)
     end_date = boundary_date(end_index, timeline, end_boundary)
 
-    start_snapshot = snapshot(start_index, timeline)
-    end_snapshot = snapshot(end_index, timeline)
+    ctx = snapshot_context(timeline)
+    start_snapshot = snapshot_from(start_index, timeline, ctx)
+    end_snapshot = snapshot_from(end_index, timeline, ctx)
 
     start_eligible =
       start_snapshot |> Map.values() |> Enum.filter(&eligible_at?(&1, start_date, opts))

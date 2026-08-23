@@ -11,8 +11,8 @@ defmodule EloServerWeb.CompareLive do
 
   def mount(_params, _session, socket) do
     timeline = Ranking.tournament_timeline()
-    start_id = timeline |> Enum.reverse() |> Enum.at(1) |> then(& &1 && &1.id)
-    start_id = start_id || (timeline |> List.first() |> then(& &1 && &1.id))
+    start_id = timeline |> Enum.reverse() |> Enum.at(1) |> then(&(&1 && &1.id))
+    start_id = start_id || timeline |> List.first() |> then(&(&1 && &1.id))
 
     socket =
       socket
@@ -183,27 +183,33 @@ defmodule EloServerWeb.CompareLive do
               </thead>
               <tbody>
                 <tr :for={entry <- @entries} class={row_class(entry.status)}>
-                  <td class="rating-place-cell">
-                    <span class="rating-place">{entry.rank_end || "-"}</span>
-                    <span class={"rating-rank-change #{rank_change_class(if entry.status == :new, do: :new, else: entry.rank_delta)}"}>
-                      {rank_change_label(entry)}
+                  <td data-label="Rank">
+                    <span class="rating-place-cell">
+                      <span class="rating-place">{entry.rank_end || "-"}</span>
+                      <span class={"rating-rank-change #{rank_change_class(if entry.status == :new, do: :new, else: entry.rank_delta)}"}>
+                        {rank_change_label(entry)}
+                      </span>
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Player">
                     <.link navigate={~p"/player/#{entry.player_id}"} class="rating-player-link">
                       {entry.player_name}
                     </.link>
                   </td>
-                  <td class="rating-elo-cell">
-                    <span class="rating-elo">{entry.games_end}</span>
-                    <span class={"rating-elo-change #{games_change_class(entry.games_in_span)}"}>
-                      {games_change_label(entry.games_in_span)}
+                  <td data-label="Games Played">
+                    <span class="rating-elo-cell">
+                      <span class="rating-elo">{entry.games_end}</span>
+                      <span class={"rating-elo-change #{games_change_class(entry.games_in_span)}"}>
+                        {games_change_label(entry.games_in_span)}
+                      </span>
                     </span>
                   </td>
-                  <td class="rating-elo-cell">
-                    <span class="rating-elo">{floor(entry.elo_end)}</span>
-                    <span class={"rating-elo-change #{elo_change_class(entry.elo_delta)}"}>
-                      {elo_change_label(entry.elo_delta)}
+                  <td data-label="Elo">
+                    <span class="rating-elo-cell">
+                      <span class="rating-elo">{floor(entry.elo_end)}</span>
+                      <span class={"rating-elo-change #{elo_change_class(entry.elo_delta)}"}>
+                        {elo_change_label(entry.elo_delta)}
+                      </span>
                     </span>
                   </td>
                 </tr>

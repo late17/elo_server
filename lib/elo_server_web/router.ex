@@ -20,6 +20,7 @@ defmodule EloServerWeb.Router do
     live "/", RatingLive
     live "/about", AboutLive
     live "/player/:id", PlayerLive
+    # live "/compare", CompareLive
   end
 
   # Other scopes may use custom stacks.

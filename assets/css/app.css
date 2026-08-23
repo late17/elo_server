@@ -240,11 +240,6 @@ html:has(.rating-page) body {
   background: rgba(18, 18, 18, 0.96);
   border: 1px solid rgba(255, 215, 0, 0.4);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  padding-right: 0.5rem;
-}
-
-.rating-table thead th:last-child {
-  padding-right: 1rem;
 }
 
 .rating-add-padding-about {
@@ -513,6 +508,69 @@ html:has(.rating-page) body {
   transform: scale(1.2);
 }
 
+.rating-history-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  width: min(1100px, 100%);
+  margin: 0 auto 1.5rem;
+  padding: 0.75rem 1.25rem;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: rgba(18, 18, 18, 0.96);
+  border: 1px solid rgba(255, 215, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+}
+
+.rating-history-nav-btn {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 215, 0, 0.5);
+  background: transparent;
+  color: gold;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.rating-history-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 215, 0, 0.15);
+}
+
+.rating-history-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.rating-history-nav-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+  color: gold;
+}
+
+.rating-history-nav-name {
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rating-history-nav-date {
+  font-size: 0.85rem;
+  color: rgba(255, 215, 0, 0.6);
+  white-space: nowrap;
+}
+
 .rating-compare-controls {
   display: flex;
   justify-content: center;
@@ -760,7 +818,8 @@ html:has(.rating-page) body {
   }
 
   .rating-table-container,
-  .rating-profile {
+  .rating-profile,
+  .rating-history-nav {
     width: 100%;
     border-radius: 10px;
     margin-left: 0.5rem;
@@ -768,32 +827,116 @@ html:has(.rating-page) body {
     width: calc(100% - 1rem);
   }
 
-  .rating-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  .rating-history-nav {
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
   }
 
-  .rating-table {
-    width: max-content;
-    min-width: 100%;
+  .rating-history-nav-label {
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .rating-history-nav-name {
+    font-size: 0.9rem;
+  }
+
+  .rating-table-container {
+    overflow-x: visible;
   }
 
   .rating-history-table {
     table-layout: auto;
   }
 
-  .rating-history-table thead th {
-    width: auto !important;
+  /* Card layout: each row becomes a self-contained card, each cell a
+     label/value line, driven by the `data-label` attributes rendered
+     alongside the cells in rating_live/compare_live/player_live. Cells with
+     no `data-label` (the history table's chevron and its colspan detail
+     row) are given their own layout below instead of the label/value one. */
+  .rating-table,
+  .rating-table tbody,
+  .rating-table tr {
+    display: block;
+    width: 100%;
   }
 
-  .rating-table thead th {
-    padding: 0.5rem 0.4rem;
-    font-size: 0.9rem;
+  .rating-table thead {
+    display: none;
+  }
+
+  .rating-table tbody tr {
+    position: relative;
+    margin-bottom: 0.6rem;
+    padding: 0.3rem 0.7rem;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    border-radius: 10px;
+    background: rgba(255, 215, 0, 0.04);
+  }
+
+  .rating-table tbody tr:has(> .rating-game-detail-cell) {
+    margin-bottom: 0.6rem;
+    margin-top: -0.6rem;
+    padding: 0;
+    border: none;
+    background: none;
   }
 
   .rating-table tbody td {
-    padding: 0.4rem;
+    padding: 0.5rem 0;
     font-size: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .rating-table tbody td[data-label] {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    text-align: right;
+  }
+
+  .rating-table tbody td[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: rgba(255, 215, 0, 0.55);
+    text-align: left;
+  }
+
+  .rating-table tbody td:first-child {
+    border-top: none;
+  }
+
+  /* The whole card is already the tap target for expand/collapse (see
+     `.rating-game-row`'s cursor: pointer), so the desktop chevron column
+     is dropped here rather than fought into a corner where it collides
+     with the first label/value row. */
+  .rating-table tbody td.rating-game-chevron {
+    display: none;
+  }
+
+  .rating-table tbody td.rating-game-detail-cell {
+    display: block;
+    border-top: none;
+  }
+
+  .rating-place-cell,
+  .rating-elo-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 0.3rem;
+    white-space: nowrap;
+    padding-right: 0;
+  }
+
+  .rating-rank-change,
+  .rating-elo-change {
+    position: static;
+    transform: none;
+    font-size: 0.85rem;
   }
 
   .rating-profile {
@@ -830,20 +973,6 @@ html:has(.rating-page) body {
   .rating-footer {
     font-size: 0.8rem;
     padding: 0.5rem 0.75rem;
-  }
-
-  .rating-elo-cell {
-    display: flex;
-    align-items: baseline;
-    justify-content: center;
-    gap: 0.3rem;
-    white-space: nowrap;
-  }
-
-  .rating-elo-change {
-    position: static;
-    transform: none;
-    font-size: 0.85rem;
   }
 
   .rating-game-detail {

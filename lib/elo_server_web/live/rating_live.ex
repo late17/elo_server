@@ -6,11 +6,11 @@ defmodule EloServerWeb.RatingLive do
   @columns [:rank, :player_name, :games_played, :elo]
 
   def mount(_params, _session, socket) do
-    entries = Ranking.list_rankings()
+    timeline = Ranking.tournament_timeline()
 
     socket =
       socket
-      |> assign(:entries, entries)
+      |> assign(:timeline, timeline)
       |> assign(:sort_col, 0)
       |> assign(:sort_dir_used, true)
       |> assign(:sort_dirs, %{0 => true, 1 => true, 2 => true, 3 => true})
@@ -18,22 +18,59 @@ defmodule EloServerWeb.RatingLive do
     {:ok, socket}
   end
 
-  def handle_event("sort", %{"col" => col_str}, socket) do
-    col = String.to_integer(col_str)
-    field = Enum.at(@columns, col)
-    ascending? = socket.assigns.sort_dirs[col]
+  def handle_params(params, _uri, socket) do
+    timeline = socket.assigns.timeline
+    last_index = length(timeline) - 1
 
-    entries =
-      Enum.sort_by(socket.assigns.entries, &sort_key(&1, field), sort_order(field, ascending?))
+    {index, entries} =
+      case params["t"] && Enum.find_index(timeline, &(&1.id == params["t"])) do
+        nil ->
+          {last_index, Ranking.list_rankings()}
+
+        index ->
+          {index, Ranking.list_rankings_at({:tournament, Enum.at(timeline, index).id})}
+      end
 
     socket =
       socket
-      |> assign(:entries, entries)
+      |> assign(:entries, apply_sort(entries, socket.assigns))
+      |> assign(:current_index, index)
+      |> assign(:current_tournament, if(index >= 0, do: Enum.at(timeline, index)))
+      |> assign(:at_oldest?, timeline == [] or index <= 0)
+      |> assign(:at_newest?, index >= last_index)
+
+    {:noreply, socket}
+  end
+
+  def handle_event("sort", %{"col" => col_str}, socket) do
+    col = String.to_integer(col_str)
+    ascending? = socket.assigns.sort_dirs[col]
+
+    socket =
+      socket
       |> assign(:sort_col, col)
       |> assign(:sort_dir_used, ascending?)
       |> assign(:sort_dirs, Map.put(socket.assigns.sort_dirs, col, !ascending?))
 
-    {:noreply, socket}
+    {:noreply, assign(socket, :entries, apply_sort(socket.assigns.entries, socket.assigns))}
+  end
+
+  def handle_event("step", %{"dir" => dir}, socket) do
+    timeline = socket.assigns.timeline
+    target_index = socket.assigns.current_index + if(dir == "back", do: -1, else: 1)
+
+    path =
+      case Enum.at(timeline, target_index) do
+        nil -> ~p"/"
+        tournament -> ~p"/?t=#{tournament.id}"
+      end
+
+    {:noreply, push_patch(socket, to: path)}
+  end
+
+  defp apply_sort(entries, %{sort_col: col, sort_dir_used: ascending?}) do
+    field = Enum.at(@columns, col)
+    Enum.sort_by(entries, &sort_key(&1, field), sort_order(field, ascending?))
   end
 
   defp sort_key(entry, :player_name), do: Map.fetch!(entry, :player_name)
@@ -81,6 +118,33 @@ defmodule EloServerWeb.RatingLive do
         </header>
 
         <main class="rating-main">
+          <div :if={@timeline != []} class="rating-history-nav">
+            <button
+              type="button"
+              class="rating-history-nav-btn"
+              phx-click="step"
+              phx-value-dir="back"
+              disabled={@at_oldest?}
+              aria-label="Previous tournament"
+            >
+              ‹
+            </button>
+            <div class="rating-history-nav-label">
+              <span class="rating-history-nav-name">{@current_tournament.name}</span>
+              <span class="rating-history-nav-date">{@current_tournament.date}</span>
+            </div>
+            <button
+              type="button"
+              class="rating-history-nav-btn"
+              phx-click="step"
+              phx-value-dir="forward"
+              disabled={@at_newest?}
+              aria-label="Next tournament"
+            >
+              ›
+            </button>
+          </div>
+
           <div class="rating-table-container">
             <table class="rating-table">
               <thead>
@@ -102,22 +166,26 @@ defmodule EloServerWeb.RatingLive do
               </thead>
               <tbody>
                 <tr :for={entry <- @entries}>
-                  <td class="rating-place-cell">
-                    <span class="rating-place">{entry.rank}</span>
-                    <span class={"rating-rank-change #{rank_change_class(entry.rank_change)}"}>
-                      {rank_change_label(entry.rank_change)}
+                  <td data-label="Rank">
+                    <span class="rating-place-cell">
+                      <span class="rating-place">{entry.rank}</span>
+                      <span class={"rating-rank-change #{rank_change_class(entry.rank_change)}"}>
+                        {rank_change_label(entry.rank_change)}
+                      </span>
                     </span>
                   </td>
-                  <td>
+                  <td data-label="Player">
                     <.link navigate={~p"/player/#{entry.player_id}"} class="rating-player-link">
                       {entry.player_name}
                     </.link>
                   </td>
-                  <td>{entry.games_played}</td>
-                  <td class="rating-elo-cell">
-                    <span class="rating-elo">{floor(entry.elo)}</span>
-                    <span class={"rating-elo-change #{elo_change_class(entry.elo_change)}"}>
-                      {elo_change_label(entry.elo_change)}
+                  <td data-label="Games Played">{entry.games_played}</td>
+                  <td data-label="Elo">
+                    <span class="rating-elo-cell">
+                      <span class="rating-elo">{floor(entry.elo)}</span>
+                      <span class={"rating-elo-change #{elo_change_class(entry.elo_change)}"}>
+                        {elo_change_label(entry.elo_change)}
+                      </span>
                     </span>
                   </td>
                 </tr>

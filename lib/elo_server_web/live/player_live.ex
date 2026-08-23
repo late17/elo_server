@@ -59,8 +59,11 @@ defmodule EloServerWeb.PlayerLive do
   defp place_counts(games) do
     Enum.reduce(games, %{first: 0, second: 0, third: 0, fourth: 0}, fn game, acc ->
       case game.result do
-        place when place in [:first, :second, :third, :fourth] -> Map.update!(acc, place, &(&1 + 1))
-        _ -> acc
+        place when place in [:first, :second, :third, :fourth] ->
+          Map.update!(acc, place, &(&1 + 1))
+
+        _ ->
+          acc
       end
     end)
   end
@@ -139,6 +142,7 @@ defmodule EloServerWeb.PlayerLive do
 
   defp signed_points(value) when is_number(value) do
     sign = if value >= 0, do: "+", else: "−"
+
     :erlang.float_to_binary(abs(value), decimals: 1)
     |> then(&"#{sign}#{&1}")
   end
@@ -282,15 +286,19 @@ defmodule EloServerWeb.PlayerLive do
                     <td class="rating-game-chevron">
                       {if @expanded_game_id == game.game_id, do: "▾", else: "▸"}
                     </td>
-                    <td>{game.tournament_date}</td>
-                    <td>{game.tournament_name}</td>
-                    <td>{round_label(game.round_type, game.round_number)}</td>
-                    <td>{seat_label(game.seat)}</td>
-                    <td class={result_class(game.result)}>{result_label(game.result)}</td>
-                    <td class="rating-elo-cell">
-                      <span class="rating-elo">{floor(game.elo_before + game.elo_diff)}</span>
-                      <span class={"rating-elo-change #{elo_change_class(game.elo_diff)}"}>
-                        {elo_change_label(game.elo_diff)}
+                    <td data-label="Date">{game.tournament_date}</td>
+                    <td data-label="Tournament">{game.tournament_name}</td>
+                    <td data-label="Round">{round_label(game.round_type, game.round_number)}</td>
+                    <td data-label="Seat">{seat_label(game.seat)}</td>
+                    <td class={result_class(game.result)} data-label="Result">
+                      {result_label(game.result)}
+                    </td>
+                    <td data-label="Elo">
+                      <span class="rating-elo-cell">
+                        <span class="rating-elo">{floor(game.elo_before + game.elo_diff)}</span>
+                        <span class={"rating-elo-change #{elo_change_class(game.elo_diff)}"}>
+                          {elo_change_label(game.elo_diff)}
+                        </span>
                       </span>
                     </td>
                   </tr>
@@ -327,7 +335,10 @@ defmodule EloServerWeb.PlayerLive do
                               </span>
                             </li>
                           </ul>
-                          <div :if={team.seat != @expanded_game.viewer_seat} class="rating-game-team-points">
+                          <div
+                            :if={team.seat != @expanded_game.viewer_seat}
+                            class="rating-game-team-points"
+                          >
                             <span>vs you</span>
                             <span class={points_class(team.points_vs_viewer)}>
                               {signed_points(team.points_vs_viewer)}
