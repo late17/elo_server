@@ -24,6 +24,15 @@ config :elo_server, EloServerWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
 if config_env() == :prod do
+  sync_token =
+    System.get_env("SYNC_TOKEN") ||
+      raise """
+      environment variable SYNC_TOKEN is missing.
+      It authenticates the local SYNC client against the /api/sync endpoints.
+      """
+
+  config :elo_server, :sync_token, sync_token
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

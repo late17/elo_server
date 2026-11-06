@@ -38,6 +38,9 @@ config :elo_server, EloServer.Repo,
   show_sensitive_data_on_connection_error: true,
   pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "10"))
 
+# Shared secret for the SYNC API (local Kotlin app -> this server).
+config :elo_server, :sync_token, System.get_env("SYNC_TOKEN")
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #

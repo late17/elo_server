@@ -14,6 +14,10 @@ defmodule EloServerWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :sync_auth do
+    plug EloServerWeb.Plugs.SyncAuth
+  end
+
   scope "/", EloServerWeb do
     pipe_through :browser
 
@@ -23,10 +27,11 @@ defmodule EloServerWeb.Router do
     # live "/compare", CompareLive
   end
 
-  # Other scopes may use custom stacks.
-  # scope "/api", EloServerWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", EloServerWeb do
+    pipe_through [:api, :sync_auth]
+
+    post "/sync/tournament", SyncController, :create
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:elo_server, :dev_routes) do

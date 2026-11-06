@@ -165,7 +165,12 @@ defmodule EloServer.GameDetail do
 
     breakdown_input =
       Enum.map(teams, fn team ->
-        %{seat: team.seat, rating: team.rating, result: team.result, tech?: tech_by_seat[team.seat]}
+        %{
+          seat: team.seat,
+          rating: team.rating,
+          result: team.result,
+          tech?: tech_by_seat[team.seat]
+        }
       end)
 
     breakdown_result =

@@ -11,7 +11,6 @@ defmodule EloServer.Tournaments.Team do
       references: :id,
       type: :binary_id
 
-    has_many :players_in_tournament, EloServer.Players.PlayerInTournament,
-      foreign_key: :team_id
+    has_many :players_in_tournament, EloServer.Players.PlayerInTournament, foreign_key: :team_id
   end
 end

@@ -9,7 +9,6 @@ defmodule EloServer.Players.Player do
     field :map_names, :string, source: :mapNames
     field :games_played, :integer, source: :gamesPlayed
 
-    has_many :player_in_tournaments, EloServer.Players.PlayerInTournament,
-      foreign_key: :player_id
+    has_many :player_in_tournaments, EloServer.Players.PlayerInTournament, foreign_key: :player_id
   end
 end
