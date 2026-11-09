@@ -31,6 +31,7 @@ defmodule EloServerWeb.Router do
     pipe_through [:api, :sync_auth]
 
     post "/sync/tournament", SyncController, :create
+    delete "/sync/tournament", SyncController, :delete
   end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
