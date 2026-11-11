@@ -29,6 +29,7 @@ defmodule EloServerWeb.SyncController do
 
   def delete(conn, params) do
     short_name = Map.fetch!(params, "short_name")
+
     case Sync.remove_tournament(short_name) do
       {:ok, tournament} ->
         conn

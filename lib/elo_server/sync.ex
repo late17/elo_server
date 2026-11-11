@@ -95,7 +95,9 @@ defmodule EloServer.Sync do
     |> Multi.run(:delete_pits, fn repo, %{pits: pits} -> delete_each(repo, pits) end)
     |> Multi.run(:delete_rounds, fn repo, %{rounds: rounds} -> delete_each(repo, rounds) end)
     |> Multi.run(:delete_teams, fn repo, %{teams: teams} -> delete_each(repo, teams) end)
-    |> Multi.run(:delete_tournament, fn repo, %{tournament: tournament} -> repo.delete(tournament) end)
+    |> Multi.run(:delete_tournament, fn repo, %{tournament: tournament} ->
+      repo.delete(tournament)
+    end)
     |> Repo.transaction()
     |> case do
       {:ok, %{tournament: tournament}} -> {:ok, tournament}
@@ -120,7 +122,9 @@ defmodule EloServer.Sync do
   defp revert_players(repo, games, pits) do
     pits_by_team = Enum.group_by(pits, & &1.team_id)
     player_ids = pits |> Enum.map(& &1.player_id) |> Enum.reject(&is_nil/1) |> Enum.uniq()
-    players_by_id = repo.all(from p in Player, where: p.id in ^player_ids) |> Map.new(&{&1.id, &1})
+
+    players_by_id =
+      repo.all(from p in Player, where: p.id in ^player_ids) |> Map.new(&{&1.id, &1})
 
     {elo_deltas, game_deltas} =
       Enum.reduce(games, {%{}, %{}}, fn game, acc ->

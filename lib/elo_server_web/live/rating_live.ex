@@ -116,7 +116,7 @@ defmodule EloServerWeb.RatingLive do
         <header class="rating-header">
           <h1>RATING DEBATES UA</h1>
         </header>
-
+        
         <main class="rating-main">
           <div :if={@timeline != []} class="rating-history-nav">
             <button
@@ -133,6 +133,7 @@ defmodule EloServerWeb.RatingLive do
               <span class="rating-history-nav-name">{@current_tournament.name}</span>
               <span class="rating-history-nav-date">{@current_tournament.date}</span>
             </div>
+            
             <button
               type="button"
               class="rating-history-nav-btn"
@@ -144,29 +145,50 @@ defmodule EloServerWeb.RatingLive do
               ›
             </button>
           </div>
-
+          
           <div class="rating-table-container">
-            <table class="rating-table">
+            <table class="rating-table rating-leaderboard">
               <thead>
                 <tr>
-                  <th phx-click="sort" phx-value-col="0">
-                    RANK <span class="rating-arrow">{arrow(@sort_col, 0, @sort_dir_used)}</span>
+                  <th
+                    class={["rating-col-rank", @sort_col == 0 && "sorted"]}
+                    phx-click="sort"
+                    phx-value-col="0"
+                  >
+                    <span class="lb-long">RANK</span><span class="lb-short">#</span>
+                    <span class="rating-arrow">{arrow(@sort_col, 0, @sort_dir_used)}</span>
                   </th>
-                  <th phx-click="sort" phx-value-col="1">
+                  
+                  <th
+                    class={["rating-col-player", @sort_col == 1 && "sorted"]}
+                    phx-click="sort"
+                    phx-value-col="1"
+                  >
                     PLAYER <span class="rating-arrow">{arrow(@sort_col, 1, @sort_dir_used)}</span>
                   </th>
-                  <th phx-click="sort" phx-value-col="2">
-                    GAMES PLAYED
+                  
+                  <th
+                    class={["rating-col-games", @sort_col == 2 && "sorted"]}
+                    phx-click="sort"
+                    phx-value-col="2"
+                  >
+                    <span class="lb-long">GAMES PLAYED</span><span class="lb-short">G</span>
                     <span class="rating-arrow">{arrow(@sort_col, 2, @sort_dir_used)}</span>
                   </th>
-                  <th phx-click="sort" phx-value-col="3">
+                  
+                  <th
+                    class={["rating-col-elo", @sort_col == 3 && "sorted"]}
+                    phx-click="sort"
+                    phx-value-col="3"
+                  >
                     ELO <span class="rating-arrow">{arrow(@sort_col, 3, @sort_dir_used)}</span>
                   </th>
                 </tr>
               </thead>
+              
               <tbody>
                 <tr :for={entry <- @entries}>
-                  <td data-label="Rank">
+                  <td class="rating-col-rank" data-label="Rank">
                     <span class="rating-place-cell">
                       <span class="rating-place">{entry.rank}</span>
                       <span class={"rating-rank-change #{rank_change_class(entry.rank_change)}"}>
@@ -174,13 +196,16 @@ defmodule EloServerWeb.RatingLive do
                       </span>
                     </span>
                   </td>
-                  <td data-label="Player">
+                  
+                  <td class="rating-col-player" data-label="Player">
                     <.link navigate={~p"/player/#{entry.player_id}"} class="rating-player-link">
                       {entry.player_name}
                     </.link>
                   </td>
-                  <td data-label="Games Played">{entry.games_played}</td>
-                  <td data-label="Elo">
+                  
+                  <td class="rating-col-games" data-label="Games Played">{entry.games_played}</td>
+                  
+                  <td class="rating-col-elo" data-label="Elo">
                     <span class="rating-elo-cell">
                       <span class="rating-elo">{floor(entry.elo)}</span>
                       <span class={"rating-elo-change #{elo_change_class(entry.elo_change)}"}>
@@ -193,7 +218,7 @@ defmodule EloServerWeb.RatingLive do
             </table>
           </div>
         </main>
-
+        
         <footer class="rating-footer">
           © {Date.utc_today().year} Lviv Debate Union спільно з Аніме на Аві, Східняцьке Бидло Продакшн та КООП "Озеро"
           | <.link navigate={~p"/about"} class="rating-footer-about">About</.link>

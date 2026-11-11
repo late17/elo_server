@@ -109,7 +109,11 @@
 html:has(.rating-page),
 html:has(.rating-page) body {
   background-color: black;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.lb-short {
+  display: none;
 }
 
 .rating-page {
@@ -120,7 +124,7 @@ html:has(.rating-page) body {
   background-color: black;
   min-height: 100vh;
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
   cursor: url("/images/angel.png") 16 16, auto;
 }
 
@@ -262,46 +266,6 @@ html:has(.rating-page) body {
   color: gold;
 }
 
-/*
- * Fixed column widths (used only on desktop, see mobile override below) so
- * the wide expanded-game-detail row (a colspan cell) can't force every
- * column to grow to fit its content — table-layout: fixed sizes columns
- * from these widths alone, ignoring cell content entirely. Scoped to the
- * player report's history table specifically (not the leaderboard's
- * `.rating-table`, which has a different column count).
- */
-.rating-history-table {
-  table-layout: fixed;
-}
-
-.rating-history-table thead th:nth-child(1) {
-  width: 3%;
-}
-
-.rating-history-table thead th:nth-child(2) {
-  width: 12%;
-}
-
-.rating-history-table thead th:nth-child(3) {
-  width: 33%;
-}
-
-.rating-history-table thead th:nth-child(4) {
-  width: 16%;
-}
-
-.rating-history-table thead th:nth-child(5) {
-  width: 8%;
-}
-
-.rating-history-table thead th:nth-child(6) {
-  width: 16%;
-}
-
-.rating-history-table thead th:nth-child(7) {
-  width: 12%;
-}
-
 .rating-table tbody td {
   padding: 0.5rem;
   text-align: center;
@@ -312,21 +276,6 @@ html:has(.rating-page) body {
 
 .rating-table tbody tr:hover {
   background-color: rgba(255, 215, 0, 0.2);
-}
-
-.rating-game-row {
-  cursor: pointer;
-}
-
-.rating-game-chevron {
-  width: 1.5rem;
-  color: #ffd700;
-  font-size: 0.9rem;
-}
-
-.rating-game-detail-cell {
-  padding: 0 !important;
-  text-align: left !important;
 }
 
 .rating-game-detail {
@@ -845,10 +794,6 @@ html:has(.rating-page) body {
     overflow-x: visible;
   }
 
-  .rating-history-table {
-    table-layout: auto;
-  }
-
   /* Card layout: each row becomes a self-contained card, each cell a
      label/value line, driven by the `data-label` attributes rendered
      alongside the cells in rating_live/compare_live/player_live. Cells with
@@ -872,14 +817,6 @@ html:has(.rating-page) body {
     border: 1px solid rgba(255, 215, 0, 0.25);
     border-radius: 10px;
     background: rgba(255, 215, 0, 0.04);
-  }
-
-  .rating-table tbody tr:has(> .rating-game-detail-cell) {
-    margin-bottom: 0.6rem;
-    margin-top: -0.6rem;
-    padding: 0;
-    border: none;
-    background: none;
   }
 
   .rating-table tbody td {
@@ -907,19 +844,6 @@ html:has(.rating-page) body {
   }
 
   .rating-table tbody td:first-child {
-    border-top: none;
-  }
-
-  /* The whole card is already the tap target for expand/collapse (see
-     `.rating-game-row`'s cursor: pointer), so the desktop chevron column
-     is dropped here rather than fought into a corner where it collides
-     with the first label/value row. */
-  .rating-table tbody td.rating-game-chevron {
-    display: none;
-  }
-
-  .rating-table tbody td.rating-game-detail-cell {
-    display: block;
     border-top: none;
   }
 
@@ -977,5 +901,541 @@ html:has(.rating-page) body {
 
   .rating-game-detail {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ===== Leaderboard: compact one-line rows on phones =====
+   Columns are sized by a grid (not by content), so the name column shrinks
+   to whatever is left and long names are ellipsised -- no horizontal scroll. */
+@media (max-width: 640px) {
+  .rating-table-container:has(.rating-leaderboard) {
+    overflow: visible;
+  }
+
+  .lb-long {
+    display: none;
+  }
+
+  .lb-short {
+    display: inline;
+  }
+
+  .rating-leaderboard thead {
+    display: block;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    border-radius: 10px 10px 0 0;
+    background: linear-gradient(90deg, #ffd700, #b8860b);
+  }
+
+  .rating-leaderboard thead tr,
+  .rating-leaderboard tbody tr {
+    display: grid;
+    grid-template-columns: 3.6rem minmax(0, 1fr) 2.4rem 4.8rem;
+    align-items: center;
+    padding: 0 0.5rem;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    min-height: 48px;
+  }
+
+  .rating-leaderboard thead th {
+    padding: 0.6rem 0;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    background: none;
+    color: black;
+  }
+
+  .rating-leaderboard thead .rating-col-rank,
+  .rating-leaderboard thead .rating-col-player {
+    text-align: left;
+  }
+
+  /* no arrows on phones; the active sort column is underlined instead */
+  .rating-leaderboard .rating-arrow {
+    display: none;
+  }
+
+  .rating-leaderboard thead th.sorted {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .rating-leaderboard thead .rating-col-elo,
+  .rating-leaderboard thead .rating-col-games {
+    text-align: right;
+  }
+
+  .rating-leaderboard tbody tr {
+    position: relative;
+    align-items: start;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .rating-leaderboard tbody tr:nth-child(even) {
+    background: rgba(255, 215, 0, 0.07);
+  }
+
+  .rating-leaderboard tbody td[data-label] {
+    display: block;
+    padding: 0.4rem 0 0;
+    line-height: 1.15;
+    border-top: none;
+    font-size: 0.95rem;
+    min-width: 0;
+  }
+
+  .rating-leaderboard tbody td[data-label]::before {
+    content: none;
+  }
+
+  .rating-leaderboard tbody td.rating-col-player {
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .rating-leaderboard tbody td.rating-col-games {
+    text-align: right;
+    font-size: 0.8rem;
+    color: rgba(255, 215, 0, 0.65);
+    padding-top: 0.5rem;
+  }
+
+  .rating-leaderboard tbody td.rating-col-elo {
+    text-align: right;
+  }
+
+  /* number on top, change tag underneath: the tag can never push the
+     number sideways, and every row reserves the tag line so heights match */
+  .rating-leaderboard .rating-place-cell,
+  .rating-leaderboard .rating-elo-cell {
+    display: flex;
+    flex-direction: column;
+    white-space: nowrap;
+    gap: 0;
+    line-height: 1.15;
+  }
+
+  .rating-leaderboard .rating-place-cell {
+    align-items: flex-start;
+  }
+
+  .rating-leaderboard .rating-elo-cell {
+    align-items: flex-end;
+  }
+
+  .rating-leaderboard .rating-place {
+    font-weight: 700;
+  }
+
+  .rating-leaderboard .rating-rank-change,
+  .rating-leaderboard .rating-elo-change {
+    font-size: 0.65rem;
+    margin: 0;
+    min-height: 0.8rem;
+    line-height: 0.8rem;
+  }
+
+  /* whole row is the tap target: stretch the name link over the row */
+  .rating-leaderboard .rating-player-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+}
+
+@media (max-width: 380px) {
+  .rating-leaderboard thead tr,
+  .rating-leaderboard tbody tr {
+    grid-template-columns: 3.6rem minmax(0, 1fr) 4.8rem;
+  }
+
+  .rating-leaderboard .rating-col-games {
+    display: none !important;
+  }
+}
+
+/* ===== Player page: tournaments -> games -> detail ladder (phones) ===== */
+
+@media (max-width: 640px) {
+  .ladder-desk {
+    display: none;
+  }
+
+  .player-ladder {
+    display: block;
+    margin-top: 1rem;
+    background: rgba(12, 6, 6, 0.94);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 10px;
+    overflow: clip;
+  }
+
+  .ladder-head,
+  .ladder-trow,
+  .ladder-games-head,
+  .ladder-grow {
+    display: grid;
+    align-items: start;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: 0;
+    font: inherit;
+    color: gold;
+  }
+
+  .ladder-head,
+  .ladder-trow {
+    grid-template-columns: 1.4rem minmax(0, 1fr) 2.4rem 4.8rem;
+    padding: 0 0.5rem;
+  }
+
+  .ladder-head {
+    grid-template-columns: minmax(0, 1fr) 2.4rem 4.8rem;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    padding: 0.6rem 0.5rem 0.6rem calc(0.5rem + 1.4rem);
+    background: linear-gradient(90deg, #ffd700, #b8860b);
+    color: black;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .ladder-num {
+    text-align: right;
+  }
+
+  .ladder-tournament:nth-of-type(even) .ladder-trow {
+    background: rgba(255, 215, 0, 0.07);
+  }
+
+  .ladder-trow {
+    min-height: 48px;
+    padding-top: 0.4rem;
+    padding-bottom: 0.3rem;
+    border-top: 1px solid rgba(255, 215, 0, 0.12);
+    cursor: pointer;
+    line-height: 1.15;
+  }
+
+  .ladder-tournament .ladder-trow.open {
+    background: rgba(255, 215, 0, 0.18);
+  }
+
+  .ladder-chevron {
+    color: #ffd700;
+    font-size: 0.8rem;
+    padding-top: 0.15rem;
+  }
+
+  .ladder-name {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .ladder-name-main {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.95rem;
+  }
+
+  .ladder-name-sub {
+    font-size: 0.65rem;
+    color: rgba(255, 215, 0, 0.6);
+    padding-top: 0.1rem;
+  }
+
+  .ladder-games {
+    text-align: right;
+    font-size: 0.8rem;
+    padding-top: 0.1rem;
+    color: rgba(255, 215, 0, 0.65);
+  }
+
+  .ladder-elo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.15;
+  }
+
+  .ladder-elo .rating-elo-change {
+    position: static;
+    transform: none;
+    font-size: 0.65rem;
+    min-height: 0.8rem;
+    line-height: 0.8rem;
+  }
+
+  .ladder-games-list {
+    margin-left: 0.9rem;
+    border-left: 2px solid #ffd700;
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  .ladder-games-head,
+  .ladder-grow {
+    grid-template-columns: 1.2rem minmax(0, 1fr) 2.2rem 5rem 3.6rem;
+    padding: 0 0.5rem 0 0.3rem;
+  }
+
+  .ladder-games-head {
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    background: rgba(255, 215, 0, 0.25);
+  }
+
+  .ladder-grow {
+    min-height: 40px;
+    padding-top: 0.4rem;
+    padding-bottom: 0.3rem;
+    font-size: 0.85rem;
+    border-top: 1px solid rgba(255, 215, 0, 0.1);
+    cursor: pointer;
+    line-height: 1.15;
+  }
+
+  .ladder-grow.open {
+    background: rgba(255, 215, 0, 0.15);
+  }
+
+  .ladder-round {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ladder-result.up {
+    color: green;
+  }
+
+  .ladder-result.down {
+    color: red;
+  }
+
+  .ladder-result.up-light {
+    color: lightgreen;
+  }
+
+  .ladder-result.down-light {
+    color: lightcoral;
+  }
+
+  .ladder-game .rating-game-detail {
+    grid-template-columns: minmax(0, 1fr);
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.6rem;
+  }
+
+  .ladder-game .rating-game-team {
+    min-width: 0;
+  }
+
+  .ladder-game .rating-game-team-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .ladder-head,
+  .ladder-trow {
+    grid-template-columns: 1.2rem minmax(0, 1fr) 4.4rem;
+  }
+
+  .ladder-head {
+    grid-template-columns: minmax(0, 1fr) 4.4rem;
+  }
+
+  .ladder-head > .ladder-num:nth-last-child(2),
+  .ladder-games {
+    display: none;
+  }
+}
+
+/* ===== Player page ladder: desktop (above 640px) =====
+   One gold gradient across the whole header row (not per cell), zebra
+   tournament rows, games indented under the open tournament. ELO is the
+   last column at both levels with the same width, so the two line up. */
+@media (min-width: 641px) {
+  .player-ladder {
+    container-type: inline-size;
+    width: min(1100px, 100%);
+    margin: 1.5rem auto 0;
+    box-sizing: border-box;
+    border-radius: 16px;
+    background: rgba(18, 18, 18, 0.96);
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    overflow: clip;
+    color: gold;
+  }
+
+  .ladder-head,
+  .ladder-trow,
+  .ladder-games-head,
+  .ladder-grow {
+    display: grid;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    background: none;
+    border: 0;
+    font: inherit;
+    color: gold;
+  }
+
+  .ladder-head {
+    grid-template-columns: 9rem minmax(0, 1fr) 10rem 6rem 6rem 9rem;
+    padding: 0.8rem 0.5rem 0.8rem 2.5rem;
+    background: linear-gradient(90deg, #ffd700, #b8860b);
+    color: black;
+    font-size: 1rem;
+  }
+
+  .ladder-trow {
+    grid-template-columns: 2rem 9rem minmax(0, 1fr) 10rem 6rem 6rem 9rem;
+    min-height: 44px;
+    padding: 0.45rem 0.5rem;
+    font-size: 1.1rem;
+    border-top: 1px solid #444;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .ladder-tournament:nth-of-type(even) .ladder-trow {
+    background: rgba(255, 215, 0, 0.06);
+  }
+
+  .ladder-tournament .ladder-trow:hover,
+  .ladder-grow:hover {
+    background: rgba(255, 215, 0, 0.2);
+  }
+
+  .ladder-tournament .ladder-trow.open {
+    background: rgba(255, 215, 0, 0.22);
+  }
+
+  .ladder-chevron {
+    color: #ffd700;
+    font-size: 0.9rem;
+  }
+
+  .ladder-name-main {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ladder-name-sub {
+    display: none;
+  }
+
+  .ladder-elo {
+    position: relative;
+    padding-right: 1rem;
+  }
+
+  .ladder-games-list {
+    margin-left: 1.5rem;
+    border-left: 3px solid #ffd700;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .ladder-games-head {
+    grid-template-columns: minmax(0, 1fr) 6rem 9rem 9rem;
+    padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+    background: rgba(184, 134, 11, 0.35);
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+  }
+
+  .ladder-games-head > :first-child {
+    display: none;
+  }
+
+  .ladder-grow {
+    grid-template-columns: 2rem minmax(0, 1fr) 6rem 9rem 9rem;
+    min-height: 38px;
+    padding: 0.35rem 0.5rem;
+    font-size: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+  }
+
+  .ladder-game:nth-of-type(odd) .ladder-grow {
+    background: rgba(255, 215, 0, 0.04);
+  }
+
+  .ladder-game .ladder-grow.open {
+    background: rgba(255, 215, 0, 0.18);
+  }
+
+  .ladder-result.up {
+    color: green;
+  }
+
+  .ladder-result.down {
+    color: red;
+  }
+
+  .ladder-result.up-light {
+    color: lightgreen;
+  }
+
+  .ladder-result.down-light {
+    color: lightcoral;
+  }
+}
+
+/* Desktop: drop Points, then Stage, as the ladder itself gets narrow
+   (container queries, so it follows the table's width, not the window's). */
+@container (max-width: 900px) {
+  .ladder-head,
+  .ladder-trow {
+    grid-template-columns: 2rem 9rem minmax(0, 1fr) 10rem 6rem 9rem;
+  }
+
+  .ladder-head {
+    grid-template-columns: 9rem minmax(0, 1fr) 10rem 6rem 9rem;
+  }
+
+  .ladder-points,
+  .ladder-h-points {
+    display: none;
+  }
+}
+
+@container (max-width: 790px) {
+  .ladder-head,
+  .ladder-trow {
+    grid-template-columns: 2rem 9rem minmax(0, 1fr) 6rem 9rem;
+  }
+
+  .ladder-head {
+    grid-template-columns: 9rem minmax(0, 1fr) 6rem 9rem;
+  }
+
+  .ladder-stage,
+  .ladder-h-stage {
+    display: none;
   }
 }

@@ -17,6 +17,7 @@ defmodule EloServer.PlayerReport do
     @moduledoc "One row in a player's game history."
     defstruct [
       :game_id,
+      :tournament_id,
       :tournament_name,
       :tournament_date,
       :round_type,
@@ -112,6 +113,7 @@ defmodule EloServer.PlayerReport do
 
     %GameEntry{
       game_id: game.id,
+      tournament_id: tournament.id,
       tournament_name: tournament.name,
       tournament_date: tournament.date,
       round_type: round.type,
